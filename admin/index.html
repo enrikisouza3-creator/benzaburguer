@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benza Burguer -- Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1B1210; --bg-soft:#241811; --card:#3A2016; --card-line:#5A3423;
+    --red:#A6242F; --red-deep:#5C0F17;
+    --gold:#F2A83E; --gold-soft:#F6C874;
+    --cream:#FFF6E9; --cream-dim:#E7D8BC; --ink:#170E08;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--cream); font-family:'Inter',sans-serif;}
+  .display{font-family:'Anton',sans-serif; text-transform:uppercase;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+
+  /* login */
+  #loginScreen{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;}
+  .login-box{width:100%; max-width:340px; background:var(--bg-soft); border:1px solid var(--card-line); border-radius:18px; padding:28px;}
+  .login-box h1{font-family:'Anton'; font-size:22px; margin-bottom:18px; text-transform:uppercase;}
+  .login-box input{width:100%; background:var(--card); border:1px solid var(--card-line); border-radius:10px; padding:12px 14px; color:var(--cream); margin-bottom:12px;}
+  .login-box button{width:100%; padding:12px; border:none; border-radius:10px; background:linear-gradient(180deg,var(--red),var(--red-deep)); color:var(--cream); font-weight:700; cursor:pointer;}
+  #loginErr{display:none; color:var(--red); font-size:13px; margin-bottom:10px;}
+
+  /* app shell */
+  #app{display:none;}
+  header{display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid var(--card-line); background:var(--bg-soft);}
+  header h1{font-family:'Anton'; font-size:18px; text-transform:uppercase;}
+  header button{background:rgba(255,255,255,.06); border:1px solid var(--card-line); color:var(--cream); padding:8px 14px; border-radius:8px; cursor:pointer;}
+  nav{display:flex; gap:6px; padding:14px 24px; overflow-x:auto; border-bottom:1px solid var(--card-line);}
+  nav button{background:none; border:1px solid var(--card-line); color:var(--cream-dim); padding:9px 16px; border-radius:999px; font-size:13px; cursor:pointer; white-space:nowrap;}
+  nav button.active{background:var(--red); border-color:var(--red); color:var(--cream); font-weight:700;}
+  main{padding:20px 24px 60px; max-width:1100px; margin:0 auto;}
+  .page{display:none;} .page.active{display:block;}
+
+  .cards-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px;}
+  .stat-card{background:var(--card); border:1px solid var(--card-line); border-radius:14px; padding:16px;}
+  .stat-card b{display:block; font-family:'JetBrains Mono'; font-size:24px; color:var(--gold);}
+  .stat-card span{font-size:12px; color:var(--cream-dim);}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th, td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--card-line);}
+  th{color:var(--cream-dim); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.03em;}
+  tr.pedido-row{cursor:pointer;}
+  tr.pedido-row:hover{background:rgba(255,255,255,.03);}
+
+  .badge{display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase;}
+  .badge.novo{background:rgba(242,168,29,.18); color:var(--gold-soft);}
+  .badge.preparando{background:rgba(166,36,47,.22); color:#ff8a7a;}
+  .badge.saiu_para_entrega{background:rgba(66,133,244,.18); color:#8fb8ff;}
+  .badge.entregue{background:rgba(76,175,80,.18); color:#8fdb95;}
+  .badge.cancelado{background:rgba(120,120,120,.2); color:#bdbdbd;}
+
+  .filters{display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;}
+  .filters button{background:var(--card); border:1px solid var(--card-line); color:var(--cream-dim); padding:7px 14px; border-radius:999px; font-size:12.5px; cursor:pointer;}
+  .filters button.active{background:var(--gold); border-color:var(--gold); color:var(--ink); font-weight:700;}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .item-row{display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--card-line); border-radius:12px; padding:12px 14px; margin-bottom:8px;}
+  .item-row input[type=number]{width:70px; background:var(--bg-soft); border:1px solid var(--card-line); color:var(--cream); border-radius:8px; padding:6px 8px;}
+  .toggle{width:42px; height:24px; border-radius:999px; border:none; cursor:pointer; position:relative; background:#555;}
+  .toggle.on{background:var(--gold);}
+  .toggle::after{content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:left .2s;}
+  .toggle.on::after{left:21px;}
+
+  .btn-small{padding:8px 14px; border-radius:8px; border:none; background:var(--red); color:var(--cream); font-weight:700; font-size:12.5px; cursor:pointer;}
+
+  /* modal detalhe */
+  .overlay{position:fixed; inset:0; background:rgba(10,6,2,.65); display:none; align-items:center; justify-content:center; z-index:100; padding:16px;}
+  .overlay.on{display:flex;}
+  .modal{background:var(--bg-soft); border:1px solid var(--card-line); border-radius:16px; padding:22px; width:100%; max-width:460px; max-height:86vh; overflow-y:auto;}
+  .modal h3{font-family:'Anton'; text-transform:uppercase; margin-bottom:14px;}
+  .modal .row{display:flex; justify-content:space-between; padding:6px 0; font-size:13.5px; border-bottom:1px solid rgba(255,255,255,.06);}
+  .modal select{width:100%; margin-top:10px; background:var(--card); border:1px solid var(--card-line); color:var(--cream); padding:10px; border-radius:10px;}
+  .modal-close{float:right; background:none; border:none; color:var(--cream); font-size:20px; cursor:pointer;}
+
+  .toast{position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(140%); background:var(--ink); border:1px solid var(--gold); color:var(--cream); padding:12px 20px; border-radius:10px; font-size:13.5px; z-index:200; transition:transform .3s;}
+  .toast.show{transform:translateX(-50%) translateY(0);}
+
+  .btn-print{background:var(--gold); color:var(--ink); border:none; padding:10px 14px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px;}
+  .btn-print:hover{filter:brightness(1.05);}
+  .novo-badge-pulse{animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+
+  /* ---- CUPOM DE IMPRESSAO (80mm) ---- */
+  #reciboArea{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #reciboArea, #reciboArea *{visibility:visible;}
+    #reciboArea{
+      display:block; position:fixed; top:0; left:0;
+      width:80mm; padding:2mm 3mm; font-family:'JetBrains Mono', monospace;
+      color:#000; font-size:11.5px; line-height:1.45;
+    }
+    @page{ size:80mm auto; margin:0; }
+  }
+  .recibo-center{text-align:center;}
+  .recibo-linha{border-top:1px dashed #000; margin:6px 0;}
+  .recibo-row{display:flex; justify-content:space-between; gap:8px;}
+  .recibo-title{font-weight:700; font-size:14px; text-transform:uppercase;}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-box">
+    <h1>Benza Admin</h1>
+    <div id="loginErr">Senha incorreta</div>
+    <input type="password" id="loginPwd" placeholder="Senha" onkeydown="if(event.key==='Enter') doLogin()">
+    <button onclick="doLogin()">Entrar</button>
+  </div>
+</div>
+
+<div id="app">
+  <header>
+    <h1>Benza Burguer</h1>
+    <button onclick="doLogout()">Sair</button>
+  </header>
+
+  <nav>
+    <button class="active" data-page="dashboard" onclick="showPage('dashboard',this)">Dashboard</button>
+    <button data-page="pedidos" onclick="showPage('pedidos',this)">Pedidos</button>
+    <button data-page="bairros" onclick="showPage('bairros',this)">Bairros de entrega</button>
+    <button data-page="cardapio" onclick="showPage('cardapio',this)">Cardapio</button>
+    <button data-page="cupons" onclick="showPage('cupons',this)">Cupons</button>
+  </nav>
+
+  <main>
+    <div class="page active" id="page-dashboard">
+      <div class="cards-row">
+        <div class="stat-card"><b id="dashPedidosHoje">0</b><span>pedidos hoje</span></div>
+        <div class="stat-card"><b id="dashFaturamentoHoje">R$ 0,00</b><span>faturamento hoje</span></div>
+        <div class="stat-card"><b id="dashPendentes">0</b><span>aguardando preparo</span></div>
+        <div class="stat-card"><b id="dashSaiuEntrega">0</b><span>a caminho</span></div>
+      </div>
+      <h3 style="margin-bottom:10px;">Ultimos pedidos</h3>
+      <table id="dashTable"><thead><tr><th>Cliente</th><th>Bairro</th><th>Total</th><th>Status</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="page" id="page-pedidos">
+      <div class="filters" id="pedidosFiltros">
+        <button class="active" data-status="todos" onclick="filterPedidos('todos',this)">Todos</button>
+        <button data-status="novo" onclick="filterPedidos('novo',this)">Novo</button>
+        <button data-status="preparando" onclick="filterPedidos('preparando',this)">Preparando</button>
+        <button data-status="saiu_para_entrega" onclick="filterPedidos('saiu_para_entrega',this)">Saiu para entrega</button>
+        <button data-status="entregue" onclick="filterPedidos('entregue',this)">Entregue</button>
+        <button data-status="cancelado" onclick="filterPedidos('cancelado',this)">Cancelado</button>
+      </div>
+      <table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Bairro</th><th>Total</th><th>Pagamento</th><th>Status</th><th></th></tr></thead>
+        <tbody id="pedidosTbody"></tbody>
+      </table>
+    </div>
+
+    <div class="page" id="page-bairros">
+      <p style="color:var(--cream-dim); font-size:13px; margin-bottom:14px;">Taxa e tempo estimado de entrega por bairro. Desative um bairro para tira-lo do checkout.</p>
+      <div id="bairrosList"></div>
+      <div class="item-row" style="margin-top:16px;">
+        <input id="novoBairroNome" type="text" placeholder="Nome do bairro" style="flex:1; background:var(--bg-soft); border:1px solid var(--card-line); color:var(--cream); padding:9px 12px; border-radius:8px; margin-right:8px;">
+        <input id="novoBairroTaxa" type="number" step="0.01" placeholder="Taxa" style="width:90px; margin-right:8px;">
+        <input id="novoBairroTempo" type="number" placeholder="Min" style="width:70px; margin-right:8px;">
+        <button class="btn-small" onclick="adicionarBairro()">Adicionar</button>
+      </div>
+    </div>
+
+    <div class="page" id="page-cardapio">
+      <p style="color:var(--cream-dim); font-size:13px; margin-bottom:14px;">Desative um item para pausar a venda dele no site sem editar o codigo.</p>
+      <div id="cardapioList"></div>
+    </div>
+
+    <div class="page" id="page-cupons">
+      <div id="cuponsList"></div>
+      <div class="item-row" style="margin-top:16px;">
+        <input id="novoCupomCodigo" type="text" placeholder="Codigo" style="flex:1; background:var(--bg-soft); border:1px solid var(--card-line); color:var(--cream); padding:9px 12px; border-radius:8px; margin-right:8px;">
+        <select id="novoCupomTipo" style="margin-right:8px; background:var(--bg-soft); border:1px solid var(--card-line); color:var(--cream); padding:9px; border-radius:8px;">
+          <option value="percentual">%</option>
+          <option value="valor">R$</option>
+        </select>
+        <input id="novoCupomValor" type="number" step="0.01" placeholder="Valor" style="width:90px; margin-right:8px;">
+        <button class="btn-small" onclick="adicionarCupom()">Adicionar</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DETALHE DO PEDIDO -->
+<div class="overlay" id="detalheOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetalhe()">&times;</button>
+    <h3>Pedido</h3>
+    <div id="detalheBody"></div>
+    <select id="detalheStatus">
+      <option value="novo">Novo</option>
+      <option value="preparando">Preparando</option>
+      <option value="saiu_para_entrega">Saiu para entrega</option>
+      <option value="entregue">Entregue</option>
+      <option value="cancelado">Cancelado</option>
+    </select>
+    <div style="display:flex; gap:8px; margin-top:10px;">
+      <button class="btn-print" style="flex:1;" onclick="imprimirPedido()">Imprimir cupom</button>
+      <button class="btn-small" style="flex:1;" onclick="salvarStatus()">Salvar status</button>
+    </div>
+  </div>
+</div>
+
+<!-- AREA DE IMPRESSAO (so aparece no papel, ver @media print) -->
+<div id="reciboArea"></div>
+
+<!-- alerta sonoro de pedido novo -->
+<audio id="alertaPedidoAudio" preload="auto">
+  <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=" type="audio/wav">
+</audio>
+
+<div class="toast" id="toast"><span id="toastMsg"></span></div>
+
+<script src="../js/data.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════
+   CONFIG -- SUPA_URL vem de ../js/data.js. A chave abaixo é
+   um PLACEHOLDER: troque pela "anon key" do SEU projeto
+   Supabase (Settings > API). NUNCA cole a chave de outro
+   projeto/negócio aqui — ela dá acesso de leitura/escrita ao
+   banco de dados correspondente.
+   ══════════════════════════════════════════════════════════ */
+// SUPA_URL ja vem declarado em ../js/data.js (mesmo escopo global);
+// nao redeclarar aqui com const, senao da SyntaxError e quebra o script todo.
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hbGp0anpub3Jld2RudGN0YXViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwMzYxNTYsImV4cCI6MjA5NDYxMjE1Nn0.Jt_Nup-bR62gp5ZrOrVPIujanQbRIKZB6CC0CmiB8WY';
+const ADMIN_PWD = 'Benza2026'; // TODO: troque essa senha antes de publicar
+
+const STATUS_LABEL = {
+  novo: 'Novo', preparando: 'Preparando', saiu_para_entrega: 'Saiu para entrega',
+  entregue: 'Entregue', cancelado: 'Cancelado'
+};
+
+function fmtBR(n){ return 'R$ ' + (Number(n)||0).toFixed(2).replace('.',','); }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2200);
+}
+
+/* ---- auth ---- */
+function doLogin(){
+  const pwd = document.getElementById('loginPwd').value;
+  if(pwd === ADMIN_PWD){
+    sessionStorage.setItem('benza_admin','1');
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    initApp();
+  } else {
+    document.getElementById('loginErr').style.display='block';
+  }
+}
+function doLogout(){ sessionStorage.removeItem('benza_admin'); location.reload(); }
+if(sessionStorage.getItem('benza_admin')==='1'){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='block';
+  initApp();
+}
+
+/* ---- supabase helper ---- */
+async function supa(path, opts={}){
+  const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      apikey: SUPA_KEY,
+      Authorization: `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: opts.prefer || 'return=representation',
+      ...(opts.headers||{})
+    }
+  });
+  if(!r.ok){ console.warn('Supabase erro', path, r.status); return []; }
+  const text = await r.text();
+  return text ? JSON.parse(text) : [];
+}
+
+/* ---- pages ---- */
+function showPage(page, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(page==='pedidos') loadPedidos();
+  if(page==='bairros') loadBairros();
+  if(page==='cardapio') loadCardapio();
+  if(page==='cupons') loadCupons();
+}
+
+function initApp(){
+  loadDashboard();
+  if(!window.__pollingPedidos){
+    window.__pollingPedidos = setInterval(loadDashboard, 20000); // verifica pedido novo a cada 20s
+  }
+}
+
+/* ---- deteccao de pedido novo + alerta sonoro ---- */
+let idsPedidosConhecidos = null;
+
+function verificarPedidosNovos(pedidos){
+  const idsAtuais = new Set(pedidos.map(p=>p.id));
+  if(idsPedidosConhecidos === null){
+    idsPedidosConhecidos = idsAtuais; // primeira carga: so guarda, nao alerta
+    return;
+  }
+  const temNovo = pedidos.some(p => p.status==='novo' && !idsPedidosConhecidos.has(p.id));
+  if(temNovo){
+    tocarAlertaPedido();
+    showToast('Novo pedido recebido!');
+  }
+  idsPedidosConhecidos = idsAtuais;
+}
+
+function tocarAlertaPedido(){
+  const audio = document.getElementById('alertaPedidoAudio');
+  if(audio){ audio.currentTime = 0; audio.play().catch(()=>{}); }
+}
+
+/* ---- dashboard ---- */
+let PEDIDOS_CACHE = [];
+
+async function loadDashboard(){
+  const pedidos = await supa('pedidos?select=*&order=criado_em.desc&limit=200');
+  PEDIDOS_CACHE = pedidos;
+  const hoje = new Date().toISOString().slice(0,10);
+  const doDia = pedidos.filter(p => (p.criado_em||'').slice(0,10) === hoje);
+  document.getElementById('dashPedidosHoje').textContent = doDia.length;
+  document.getElementById('dashFaturamentoHoje').textContent = fmtBR(doDia.reduce((s,p)=>s+Number(p.total||0),0));
+  document.getElementById('dashPendentes').textContent = pedidos.filter(p=>p.status==='novo'||p.status==='preparando').length;
+  document.getElementById('dashSaiuEntrega').textContent = pedidos.filter(p=>p.status==='saiu_para_entrega').length;
+
+  const tbody = document.querySelector('#dashTable tbody');
+  tbody.innerHTML = pedidos.slice(0,8).map(p => `
+    <tr class="pedido-row" onclick="openDetalhe('${p.id}')">
+      <td>${esc(p.cliente_nome)}</td><td>${esc(p.bairro||'-')}</td><td>${fmtBR(p.total)}</td>
+      <td><span class="badge ${p.status}">${STATUS_LABEL[p.status]||p.status}</span></td>
+    </tr>`).join('') || '<tr><td colspan="4">Nenhum pedido ainda.</td></tr>';
+
+  verificarPedidosNovos(pedidos);
+}
+
+/* ---- pedidos ---- */
+let filtroStatusAtual = 'todos';
+
+async function loadPedidos(){
+  const pedidos = await supa('pedidos?select=*&order=criado_em.desc&limit=300');
+  PEDIDOS_CACHE = pedidos;
+  renderPedidos();
+}
+
+function filterPedidos(status, btn){
+  filtroStatusAtual = status;
+  document.querySelectorAll('#pedidosFiltros button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPedidos();
+}
+
+function renderPedidos(){
+  const lista = filtroStatusAtual==='todos' ? PEDIDOS_CACHE : PEDIDOS_CACHE.filter(p=>p.status===filtroStatusAtual);
+  const tbody = document.getElementById('pedidosTbody');
+  tbody.innerHTML = lista.map(p => `
+    <tr class="pedido-row">
+      <td onclick="openDetalhe('${p.id}')">${esc(p.cliente_nome)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.cliente_tel)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.bairro||'-')}</td>
+      <td onclick="openDetalhe('${p.id}')">${fmtBR(p.total)}</td>
+      <td onclick="openDetalhe('${p.id}')">${esc(p.forma_pagamento||'-')}</td>
+      <td onclick="openDetalhe('${p.id}')"><span class="badge ${p.status} ${p.status==='novo'?'novo-badge-pulse':''}">${STATUS_LABEL[p.status]||p.status}</span></td>
+      <td><button class="btn-print" onclick="event.stopPropagation(); imprimirPedidoRapido('${p.id}')" title="Imprimir cupom">Imprimir</button></td>
+    </tr>`).join('') || '<tr><td colspan="7">Nenhum pedido nessa categoria.</td></tr>';
+}
+
+let pedidoAberto = null;
+let itensAberto = [];
+
+async function openDetalhe(id){
+  const pedido = PEDIDOS_CACHE.find(p=>p.id===id);
+  if(!pedido) return;
+  pedidoAberto = pedido;
+  const itens = await supa(`itens_pedido?pedido_id=eq.${id}&select=*`);
+  itensAberto = itens;
+  document.getElementById('detalheBody').innerHTML = `
+    <div class="row"><span>Cliente</span><b>${pedido.cliente_nome}</b></div>
+    <div class="row"><span>WhatsApp</span><b>${pedido.cliente_tel}</b></div>
+    <div class="row"><span>Endereco</span><b>${pedido.endereco||'-'}</b></div>
+    <div class="row"><span>Referencia</span><b>${pedido.referencia||'-'}</b></div>
+    <div class="row"><span>Itens</span><b></b></div>
+    ${itens.map(i=>`<div class="row"><span>${i.quantidade}x ${i.item}${i.adicionais?' ('+i.adicionais+')':''}</span><b>${fmtBR(i.subtotal)}</b></div>`).join('')}
+    <div class="row"><span>Subtotal</span><b>${fmtBR(pedido.subtotal)}</b></div>
+    <div class="row"><span>Desconto</span><b>${fmtBR(pedido.desconto)}</b></div>
+    <div class="row"><span>Taxa de entrega</span><b>${fmtBR(pedido.taxa_entrega)}</b></div>
+    <div class="row"><span>Total</span><b>${fmtBR(pedido.total)}</b></div>
+    <div class="row"><span>Pagamento</span><b>${pedido.forma_pagamento||'-'}</b></div>
+  `;
+  document.getElementById('detalheStatus').value = pedido.status;
+  document.getElementById('detalheOverlay').classList.add('on');
+}
+
+function closeDetalhe(){ document.getElementById('detalheOverlay').classList.remove('on'); pedidoAberto=null; itensAberto=[]; }
+
+/* escapa texto antes de jogar no innerHTML -- nome, endereco, etc vem do cliente */
+function esc(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function montarReciboHTML(pedido, itens){
+  const dataHora = pedido.criado_em ? new Date(pedido.criado_em).toLocaleString('pt-BR') : new Date().toLocaleString('pt-BR');
+  return `
+    <div class="recibo-center recibo-title">Benza Burguer</div>
+    <div class="recibo-center">Pedido #${esc(String(pedido.id).slice(0,8))}</div>
+    <div class="recibo-center">${esc(dataHora)}</div>
+    <div class="recibo-linha"></div>
+    <div><b>Cliente:</b> ${esc(pedido.cliente_nome)}</div>
+    <div><b>WhatsApp:</b> ${esc(pedido.cliente_tel)}</div>
+    <div><b>Bairro:</b> ${esc(pedido.bairro || '-')}</div>
+    <div><b>Endereco:</b> ${esc(pedido.endereco || '-')}</div>
+    ${pedido.referencia ? `<div><b>Ref:</b> ${esc(pedido.referencia)}</div>` : ''}
+    <div class="recibo-linha"></div>
+    ${itens.map(i => `
+      <div class="recibo-row"><span>${esc(i.quantidade)}x ${esc(i.item)}</span><span>${fmtBR(i.subtotal)}</span></div>
+      ${i.adicionais ? `<div style="padding-left:8px; font-size:10.5px;">+ ${esc(i.adicionais)}</div>` : ''}
+      ${i.observacao ? `<div style="padding-left:8px; font-size:10.5px;">obs: ${esc(i.observacao)}</div>` : ''}
+    `).join('')}
+    <div class="recibo-linha"></div>
+    <div class="recibo-row"><span>Subtotal</span><span>${fmtBR(pedido.subtotal)}</span></div>
+    <div class="recibo-row"><span>Desconto</span><span>-${fmtBR(pedido.desconto)}</span></div>
+    <div class="recibo-row"><span>Entrega</span><span>${fmtBR(pedido.taxa_entrega)}</span></div>
+    <div class="recibo-linha"></div>
+    <div class="recibo-row recibo-title"><span>TOTAL</span><span>${fmtBR(pedido.total)}</span></div>
+    <div class="recibo-center" style="margin-top:4px;">Pagamento: ${esc(pedido.forma_pagamento || '-')}</div>
+    <div class="recibo-linha"></div>
+    <div class="recibo-center" style="font-size:10px;">Obrigado pela preferencia!</div>
+  `;
+}
+
+function imprimirPedido(){
+  if(!pedidoAberto) return;
+  document.getElementById('reciboArea').innerHTML = montarReciboHTML(pedidoAberto, itensAberto);
+  window.print();
+}
+
+/* impressao rapida direto da tabela, sem abrir o modal */
+async function imprimirPedidoRapido(id){
+  const pedido = PEDIDOS_CACHE.find(p=>p.id===id);
+  if(!pedido) return;
+  const itens = await supa(`itens_pedido?pedido_id=eq.${id}&select=*`);
+  document.getElementById('reciboArea').innerHTML = montarReciboHTML(pedido, itens);
+  window.print();
+}
+
+async function salvarStatus(){
+  if(!pedidoAberto) return;
+  const novoStatus = document.getElementById('detalheStatus').value;
+  await supa(`pedidos?id=eq.${pedidoAberto.id}`, {
+    method:'PATCH', prefer:'return=minimal',
+    body: JSON.stringify({ status: novoStatus, atualizado_em: new Date().toISOString() })
+  });
+  showToast('Status atualizado');
+  closeDetalhe();
+  loadPedidos();
+  loadDashboard();
+}
+
+/* ---- bairros de entrega ---- */
+let BAIRROS_CACHE_ADMIN = [];
+
+async function loadBairros(){
+  BAIRROS_CACHE_ADMIN = await supa('bairros_entrega?select=*&order=bairro.asc');
+  renderBairros();
+}
+
+function renderBairros(){
+  const box = document.getElementById('bairrosList');
+  box.innerHTML = BAIRROS_CACHE_ADMIN.map(b => `
+    <div class="item-row">
+      <span style="flex:1;">${b.bairro}</span>
+      <input type="number" step="0.01" value="${b.taxa}" onchange="atualizarBairro('${b.id}','taxa',this.value)">
+      <span class="mono" style="width:60px; text-align:center;">${b.tempo_min}min</span>
+      <button class="toggle ${b.ativo?'on':''}" onclick="atualizarBairro('${b.id}','ativo',${!b.ativo})"></button>
+    </div>`).join('');
+}
+
+async function atualizarBairro(id, campo, valor){
+  await supa(`bairros_entrega?id=eq.${id}`, { method:'PATCH', prefer:'return=minimal', body: JSON.stringify({ [campo]: valor }) });
+  showToast('Bairro atualizado');
+  loadBairros();
+}
+
+async function adicionarBairro(){
+  const bairro = document.getElementById('novoBairroNome').value.trim();
+  const taxa = Number(document.getElementById('novoBairroTaxa').value)||0;
+  const tempo_min = Number(document.getElementById('novoBairroTempo').value)||35;
+  if(!bairro) return;
+  await supa('bairros_entrega', { method:'POST', prefer:'return=minimal', body: JSON.stringify({ bairro, taxa, tempo_min, ativo:true }) });
+  document.getElementById('novoBairroNome').value='';
+  document.getElementById('novoBairroTaxa').value='';
+  document.getElementById('novoBairroTempo').value='';
+  showToast('Bairro adicionado');
+  loadBairros();
+}
+
+/* ---- cardapio (disponibilidade + preco) ---- */
+async function loadCardapio(){
+  const disponibilidade = await supa('cardapio_disponibilidade?select=*');
+  const mapDisp = {};
+  const mapPreco = {};
+  disponibilidade.forEach(d => { mapDisp[d.item] = d.disponivel; mapPreco[d.item] = d.preco; });
+  const nomes = Object.keys(window.MENU_BENZA || {}).length ? Object.keys(window.MENU_BENZA) :
+    ["Cheddar Bacon Smash","Barbecue Onion","Duplo na Brasa","Frango Crocante","Veggie Grelhado","Duplo Bacon Extra","Combo Clássico","Combo Duplo","Combo Família","Coca-Cola Lata","Guaraná Antarctica Lata","Suco Natural de Laranja","Água com Gás","Brownie com Sorvete","Milk-shake de Ovomaltine","Petit Gateau"];
+
+  document.getElementById('cardapioList').innerHTML = nomes.map(nome => {
+    const disponivel = mapDisp[nome] !== false;
+    const precoAtual = (mapPreco[nome] !== undefined && mapPreco[nome] !== null)
+      ? Number(mapPreco[nome])
+      : (window.MENU_BENZA?.[nome]?.price ?? 0);
+    const nomeEsc = esc(nome).replace(/'/g,"\\'");
+    return `<div class="item-row">
+      <span style="flex:1;">${esc(nome)}</span>
+      <span class="mono" style="font-size:12px; color:var(--cream-dim);">R$</span>
+      <input type="number" step="0.01" value="${precoAtual.toFixed(2)}"
+        onchange="atualizarPrecoItem('${nomeEsc}', this.value)" style="width:80px;">
+      <button class="toggle ${disponivel?'on':''}" onclick="toggleDisponibilidade('${nomeEsc}',${!disponivel})"></button>
+    </div>`;
+  }).join('');
+}
+
+async function atualizarPrecoItem(item, novoValor){
+  const preco = Number(novoValor);
+  if(isNaN(preco) || preco < 0){ showToast('Preco invalido'); loadCardapio(); return; }
+  const existentes = await supa(`cardapio_disponibilidade?item=eq.${encodeURIComponent(item)}&select=id`);
+  if(existentes.length){
+    await supa(`cardapio_disponibilidade?id=eq.${existentes[0].id}`, { method:'PATCH', prefer:'return=minimal', body: JSON.stringify({ preco, atualizado_em:new Date().toISOString() }) });
+  } else {
+    await supa('cardapio_disponibilidade', { method:'POST', prefer:'return=minimal', body: JSON.stringify({ item, disponivel:true, preco }) });
+  }
+  showToast('Preco atualizado');
+}
+
+async function toggleDisponibilidade(item, disponivel){
+  const existentes = await supa(`cardapio_disponibilidade?item=eq.${encodeURIComponent(item)}&select=id`);
+  if(existentes.length){
+    await supa(`cardapio_disponibilidade?id=eq.${existentes[0].id}`, { method:'PATCH', prefer:'return=minimal', body: JSON.stringify({ disponivel, atualizado_em:new Date().toISOString() }) });
+  } else {
+    await supa('cardapio_disponibilidade', { method:'POST', prefer:'return=minimal', body: JSON.stringify({ item, disponivel }) });
+  }
+  showToast('Cardapio atualizado');
+  loadCardapio();
+}
+
+/* ---- cupons ---- */
+async function loadCupons(){
+  const cupons = await supa('cupons?select=*&order=criado_em.desc');
+  document.getElementById('cuponsList').innerHTML = cupons.map(c => `
+    <div class="item-row">
+      <span style="flex:1;">${c.codigo}</span>
+      <span class="mono" style="width:90px;">${c.tipo==='percentual' ? c.valor+'%' : fmtBR(c.valor)}</span>
+      <button class="toggle ${c.ativo?'on':''}" onclick="toggleCupom('${c.id}',${!c.ativo})"></button>
+    </div>`).join('') || '<p style="color:var(--cream-dim); font-size:13px;">Nenhum cupom cadastrado.</p>';
+}
+
+async function toggleCupom(id, ativo){
+  await supa(`cupons?id=eq.${id}`, { method:'PATCH', prefer:'return=minimal', body: JSON.stringify({ ativo }) });
+  loadCupons();
+}
+
+async function adicionarCupom(){
+  const codigo = document.getElementById('novoCupomCodigo').value.trim().toUpperCase();
+  const tipo = document.getElementById('novoCupomTipo').value;
+  const valor = Number(document.getElementById('novoCupomValor').value)||0;
+  if(!codigo) return;
+  await supa('cupons', { method:'POST', prefer:'return=minimal', body: JSON.stringify({ codigo, tipo, valor, ativo:true }) });
+  document.getElementById('novoCupomCodigo').value='';
+  document.getElementById('novoCupomValor').value='';
+  showToast('Cupom criado');
+  loadCupons();
+}
+</script>
+</body>
+</html>
